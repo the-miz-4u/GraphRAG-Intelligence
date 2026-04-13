@@ -1,3 +1,5 @@
+from pyvis.network import Network
+import streamlit.components.v1 as components
 import streamlit as st
 from langchain_community.graphs import Neo4jGraph
 from langchain_community.llms import Ollama
@@ -32,7 +34,14 @@ class KnowledgeGraphManager:
         RETURN DISTINCT n.name, type(r), m.name, r.source LIMIT 20
         """
         return self.graph.query(query, params={"keywords": keywords})
-
+    def get_all_data_for_visuals(self):
+        # UI mein dikhane ke liye database se saare relationships nikalna
+        query = """
+        MATCH (n:Entity)-[r]->(m:Entity) 
+        RETURN n.name AS source, type(r) AS relation, m.name AS target LIMIT 100
+        """
+        return self.graph.query(query)
+    
 # ==========================================
 # COMPONENT 2: Extract Entities using LLM
 # ==========================================
@@ -94,7 +103,40 @@ def generate_answer_with_citations(question, kg_manager, llm):
     """
     answer = llm.invoke(prompt)
     return answer, citations
+# ==========================================
+# COMPONENT 4: Interactive Visual Graph
+# ==========================================
+def render_interactive_graph(kg_manager):
+    data = kg_manager.get_all_data_for_visuals()
+    
+    if not data:
+        st.info("Graph is empty. Please upload some text first to build the network.")
+        return
 
+    # Streamlit dark theme ke hisaab se graph design karna
+    net = Network(height="450px", width="100%", bgcolor="#0E1117", font_color="white", directed=True)
+
+    for record in data:
+        source = record['source']
+        target = record['target']
+        relation = record['relation']
+
+        # Nodes aur Edges add karna (Colors Streamlit theme se match kiye hain)
+        net.add_node(source, label=source, color="#FF4B4B")
+        net.add_node(target, label=target, color="#008CC1")
+        net.add_edge(source, target, title=relation, label=relation, color="#A0AEC0")
+
+    # Physics on karna taaki nodes aapas mein repel karein (bouncy effect)
+    net.repulsion(node_distance=150, spring_length=200)
+
+    try:
+        # HTML file generate karke Streamlit mein dikhana
+        net.save_graph("graph.html")
+        HtmlFile = open("graph.html", 'r', encoding='utf-8')
+        source_code = HtmlFile.read()
+        components.html(source_code, height=500)
+    except Exception as e:
+        st.error(f"Visualizer Error: {e}")
 
 # ==========================================
 # UI CODE: Streamlit Frontend
@@ -134,17 +176,27 @@ with col1:
             st.warning("Please provide input text.")
 
 with col2:
-    st.header("2. Graph-Augmented Query")
-    query = st.chat_input("Ask about Manish, TechNova, or Mark Zuckerberg...")
+    st.header("2. AI Query & Visualization")
     
-    if query:
-        st.chat_message("user").write(query)
-        with st.spinner("Traversing graph nodes..."):
-            ans, cites = generate_answer_with_citations(query, kg_manager, llm)
-            with st.chat_message("assistant"):
-                st.write(ans)
-                if cites:
-                    st.divider()
-                    st.markdown("#### 📚 Verifiable Citations")
-                    for c in cites:
-                        st.caption(c)
+    # Do tabs banayein
+    tab1, tab2 = st.tabs(["💬 Chat with Data", "🕸️ Interactive Graph"])
+    
+    with tab1:
+        query = st.chat_input("Ask about Manish, TechNova, or Mark Zuckerberg...")
+        if query:
+            st.chat_message("user").write(query)
+            with st.spinner("Traversing graph nodes..."):
+                ans, cites = generate_answer_with_citations(query, kg_manager, llm)
+                with st.chat_message("assistant"):
+                    st.write(ans)
+                    if cites:
+                        st.divider()
+                        st.markdown("#### 📚 Verifiable Citations")
+                        for c in cites:
+                            st.caption(c)
+                            
+    with tab2:
+        st.markdown("### Your Knowledge Network")
+        st.caption("Drag the nodes to interact with your data!")
+        # Humara naya function call karna
+        render_interactive_graph(kg_manager)
