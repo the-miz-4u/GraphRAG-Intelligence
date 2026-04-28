@@ -1,3 +1,5 @@
+import requests
+from bs4 import BeautifulSoup
 import PyPDF2
 from pyvis.network import Network
 import streamlit.components.v1 as components
@@ -18,6 +20,25 @@ def extract_text_from_pdf(uploaded_file):
             text += page.extract_text() + "\n"
     return text
 
+# idhrse url se data utha rahee h 
+def extract_text_from_url(url):
+    try:
+        # Browser ka fake 'User-Agent' bhejte hain taaki website humein block na kare
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers)
+        response.raise_for_status() # Check karna ki link sahi hai ya nahi
+        
+        # HTML ko parse karna
+        soup = BeautifulSoup(response.text, 'html.parser')
+        
+        # Website se saare paragraph <p> tags nikalna
+        paragraphs = soup.find_all('p')
+        text = "\n".join([p.get_text() for p in paragraphs])
+        
+        return text
+    except Exception as e:
+        raise Exception(f"Error fetching URL: {str(e)}")
+
 class KnowledgeGraphManager:
     def __init__(self, uri, username, password):
         self.graph = Neo4jGraph(
@@ -28,14 +49,21 @@ class KnowledgeGraphManager:
         )
         
     def add_relationship(self, entity1, relation, entity2, source):
-        rel_safe = relation.upper().replace(' ', '_')
+        # 🛡️ NAYA ROBUST SANITIZER:
+        # Ye check karega ki agar koi character alphabet ya number nahi hai, toh use '_' bana dega.
+        rel_safe = "".join([c if c.isalnum() else "_" for c in relation]).upper()
+        
+        # Ek se zyada '_' ko single '_' mein badalna (cleaning)
+        import re
+        rel_safe = re.sub(r'_+', '_', rel_safe).strip('_')
+
         query = f"""
         MERGE (n1:Entity {{name: $e1}})
         MERGE (n2:Entity {{name: $e2}})
         MERGE (n1)-[r:{rel_safe} {{source: $source}}]->(n2)
         """
         self.graph.query(query, params={"e1": entity1, "e2": entity2, "source": source})
-        
+
     def get_context(self, keywords):
         # SMART SEARCH: Search for multiple keywords at once
         query = """
@@ -74,7 +102,10 @@ class KnowledgeGraphManager:
                     e2 = parts[2].strip()
                     # Relationships save karna
                     self.add_relationship(e1, rel, e2, "Uploaded Document")
-    
+    def clear_database(self):
+        # Ye query Neo4j ke saare nodes aur relationships ko ek baar mein uda degi
+        query = "MATCH (n) DETACH DELETE n"
+        self.graph.query(query)
 # ==========================================
 # COMPONENT 2: Extract Entities using LLM
 # ==========================================
@@ -192,18 +223,44 @@ try:
     st.sidebar.success("✅ Neo4j: Connected")
 except Exception as e:
     st.sidebar.error(f"❌ Connection Error: {e}")
-st.sidebar.divider() # Ek line draw karne ke liye
-if st.sidebar.button("🗑️ Clear Chat History"):
+
+# ==========================================
+# SIDEBAR CONTROLS (Danger Zone & Chat)
+# ==========================================
+st.sidebar.divider() 
+if st.sidebar.button("🗑️ Clear Chat History", key="clear_chat_btn"):
     st.session_state.messages = []
     st.rerun()
 
+st.sidebar.divider()
+st.sidebar.header("⚙️ Database Management")
+st.sidebar.caption("Caution: This cannot be undone.")
+
+if st.sidebar.button("⚠️ Format / Clear Entire Graph", key="format_graph_btn"):
+    with st.spinner("Erasing all knowledge..."):
+        try:
+            # 1. Graph delete karna
+            kg_manager.clear_database()
+            
+            # 2. Chat history bhi delete karna (kyunki ab graph empty hai)
+            if "messages" in st.session_state:
+                st.session_state.messages = []
+                
+            st.sidebar.success("Database formatted successfully! Graph is now empty.")
+            st.rerun() # Screen ko refresh karne ke liye
+        except Exception as e:
+            st.sidebar.error(f"Failed to clear database: {e}")
+
+# ==========================================
+# MAIN SCREEN
+# ==========================================
 col1, col2 = st.columns([1, 1.5])
 
 with col1:
     st.header("1. Knowledge Ingestion")
     
-    # Do tabs: Ek upload ke liye, ek copy-paste ke liye
-    ingest_tab1, ingest_tab2 = st.tabs(["📄 Upload Document", "✍️ Paste Text"])
+    # Ab 3 Tabs aayenge!
+    ingest_tab1, ingest_tab2, ingest_tab3 = st.tabs(["📄 Upload Document", "✍️ Paste Text", "🌐 Web URL"])
     
     with ingest_tab1:
         st.markdown("Upload a PDF or Text file to automatically extract knowledge.")
@@ -213,13 +270,11 @@ with col1:
             if st.button("Process Document"):
                 with st.spinner("Reading file and building Knowledge Graph... This may take a while!"):
                     try:
-                        # File read karna (PDF ya TXT)
                         if uploaded_file.name.endswith('.pdf'):
                             source_text = extract_text_from_pdf(uploaded_file)
                         else:
                             source_text = uploaded_file.read().decode("utf-8")
                             
-                        # Graph banana (Yahan llm pass karna zaroori hai)
                         kg_manager.build_graph_from_text(source_text, llm)
                         st.success(f"Graph successfully built from {uploaded_file.name}!")
                     except Exception as e:
@@ -227,15 +282,32 @@ with col1:
 
     with ingest_tab2:
         source_text = st.text_area("Paste source text:", height=250)
-        if st.button("Build Knowledge Graph"):
+        if st.button("Build Knowledge Graph", key="paste_btn"):
             if source_text:
                 with st.spinner("Extracting entities and relationships..."):
-                    # Yahan bhi llm pass kijiye
                     kg_manager.build_graph_from_text(source_text, llm)
                     st.success("Graph built successfully!")
             else:
                 st.warning("Please enter some text first.")
-
+                
+    with ingest_tab3:
+        st.markdown("Enter a Wikipedia or Blog URL to extract knowledge.")
+        url_input = st.text_input("Enter Website URL (e.g., Wikipedia link):")
+        if st.button("Process URL", key="url_btn"):
+            if url_input:
+                with st.spinner("Scraping website and building Graph..."):
+                    try:
+                        # 1. URL se text nikalna
+                        scraped_text = extract_text_from_url(url_input)
+                        
+                        # 2. Local LLM hang na ho isliye starting ka 5000 characters le rahe hain
+                        kg_manager.build_graph_from_text(scraped_text[:5000], llm) 
+                        
+                        st.success("Successfully scraped and added to Knowledge Graph!")
+                    except Exception as e:
+                        st.error(f"Failed to scrape URL: {e}")
+            else:
+                st.warning("Please enter a URL first.")
                 
 with col2:
     st.header("2. AI Query & Visualization")
