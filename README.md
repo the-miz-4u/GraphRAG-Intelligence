@@ -18,8 +18,8 @@
 
 ## 📸 System Interface
 
-*(Yahan Apni App Ki Main Photo Daalein - Jaise ki Interactive Graph wali screen)*
-![GraphRAG Dashboard](https://via.placeholder.com/1000x500.png?text=App+Dashboard+Screenshot+Here)
+<img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/a8501b3a-43ce-41a1-80f3-a29c3e1829b4" />
+
 
 ---
 
@@ -38,9 +38,7 @@
 
 ## 📸 Chat & Knowledge Querying
 
-<img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/acecfbdd-59ac-485f-a3af-091b9d702a1e" />
-
-![Chat Interface](https://via.placeholder.com/1000x400.png?text=Chat+Interface+Screenshot+Here)
+<img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/c42f1b40-f78e-41ca-bc41-2f46d4d07afe" />
 
 ---
 
@@ -62,7 +60,8 @@
 * **Ollama:** Install [Ollama](https://ollama.com/) and pull the local model:
   ```bash
   ollama run llama3.2
-  Neo4j: Install Neo4j Desktop, create a local DBMS, set password to password, and start it on port 7687.
+  
+Neo4j: Install Neo4j Desktop, create a local DBMS, set password to password, and start it on port 7687.
 
 2. Run the System
 Bash
