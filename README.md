@@ -1,56 +1,74 @@
-# GraphRAG Intelligence System
+# 🕸️ GraphRAG Intelligence System
 
-![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
-![Neo4j](https://img.shields.io/badge/Neo4j-008CC1?style=for-the-badge&logo=neo4j&logoColor=white)
-![Ollama](https://img.shields.io/badge/Ollama-White?style=for-the-badge&logo=ollama&logoColor=black)
-![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+An advanced, offline-first Retrieval-Augmented Generation (RAG) system powered by Knowledge Graphs. This project extracts entities and relationships from various unstructured data sources to build a dynamic knowledge network, allowing users to query information with high accuracy, conversational memory, and verifiable citations.
 
-An advanced, 100% offline **Retrieval-Augmented Generation (RAG)** system that uses a **Knowledge Graph** to connect the dots between entities, eliminating AI hallucinations and enabling multi-hop reasoning.
+## ✨ Key Features
 
-## 🚀 Key Features
+* **Multi-Modal Data Ingestion:**
+  * 📄 **PDF Uploads:** Automatically extracts text and knowledge from PDF documents using `PyPDF2`.
+  * ✍️ **Raw Text Input:** Manually paste text for quick processing.
+  * 🌐 **Web Scraping:** Enter any Wikipedia or blog URL to automatically scrape and process web content using `BeautifulSoup`.
+* **Automated Knowledge Graph Construction:** Utilizes **Llama 3.2** (running locally via Ollama) to intelligently extract Entities and Relationships, automatically formatting and saving them into a **Neo4j** database.
+* **Conversational AI with Memory:** A sleek chat interface that remembers the context of the conversation (last 5 interactions) to handle pronoun resolutions (e.g., "he", "it") accurately.
+* **Verifiable Citations:** Eliminates AI hallucinations by strictly grounding answers in the Neo4j graph and providing explicit source citations for every fact.
+* **Interactive Data Visualization:** Explore your data visually with a physics-based, interactive network graph powered by **Pyvis**.
+* **Smart Database Management:** Includes a dedicated "Danger Zone" in the sidebar to format/clear the entire graph and chat history with a single click, keeping the environment clean for new topics.
+* **100% Local & Private:** Designed to run entirely on local infrastructure with zero data leaving your machine.
 
-- **Privacy-First & Offline:** Runs entirely on your local machine. No data is sent to external APIs.
-- **Deep Relationship Mapping:** Uses Neo4j to store data as interconnected nodes, allowing the AI to understand indirect relationships (A -> B -> C).
-- **Smart Context Extraction:** Powered by **Llama 3.2** (via Ollama) to accurately extract entities and relationships from unstructured text.
-- **Verifiable Citations:** The AI doesn't just answer; it provides exact source facts from the graph database to prove its logic.
+## 🛠️ Tech Stack
 
-## 🧠 System Architecture
+* **Frontend UI:** Streamlit
+* **LLM Engine:** Ollama (Llama 3.2)
+* **Graph Database:** Neo4j
+* **Data Processing & Parsing:** LangChain, PyPDF2, BeautifulSoup4, Requests
+* **Graph Visualization:** Pyvis, HTML/JS
+* **Language:** Python 3
 
-1. **Ingestion:** Text -> LLM Entity Extraction -> Neo4j Graph Creation
-2. **Retrieval:** User Query -> Smart Keyword Search -> Graph Traversal
-3. **Generation:** Graph Context -> Local LLM -> Reasoned Output with Citations
+## 🚀 Installation & Setup
 
-## 📸 Snapshot
-<img width="1919" height="1079" alt="image" src="https://github.com/user-attachments/assets/5a8e928c-b216-4598-a5cf-cc17d59a0cf7" />
+### Prerequisites
+1. **Python 3.8+** installed on your system.
+2. **Ollama:** Download and install [Ollama](https://ollama.com/), then pull the Llama 3.2 model:
+   ```bash
+   ollama run llama3.2
 
-## 🛠️ Prerequisites
-- [Docker Desktop](https://www.docker.com/) (For running Neo4j)
-- [Ollama](https://ollama.com/) (For running Llama 3.2 locally)
-- Python 3.9+
+Neo4j Desktop: Install Neo4j Desktop, create a local DBMS, set the password to password (or update it in app.py), and start the database on port 7687.
+Running the Application
+Clone the repository:
 
-## 🏁 Quick Start Guide
-
-**1. Start the Graph Database (Neo4j)**
-Run the Neo4j container using Docker:
-```bash
-docker start neo4j
-```
-
-**2. Start the AI Model (Ollama)**
-Ensure Ollama is running in the background with the Llama 3.2 model pulled.
-
-**3. Setup the Application**
-Clone the repository and install the dependencies:
-```bash
+Bash
 git clone [https://github.com/the-miz-4u/GraphRAG-Intelligence.git](https://github.com/the-miz-4u/GraphRAG-Intelligence.git)
 cd GraphRAG-Intelligence
-pip install -r requirements.txt
-```
 
-**4. Launch the App**
-```bash
-streamlit run app.py
-```
 
-## 👨‍💻 Developed By
-**Manish Sharma** 
+2. **Create and activate a virtual environment (Recommended):**
+   ```bash
+   python -m venv venv
+   # On Windows:
+   venv\Scripts\activate
+   # On Mac/Linux:
+   source venv/bin/activate
+Install dependencies:
+
+Bash
+pip install streamlit pyvis langchain_community neo4j PyPDF2 requests beautifulsoup4
+
+
+4. **Start the Streamlit App:**
+   ```bash
+   streamlit run app.py
+
+   💡 How to Use
+Ingest Knowledge: Open the app and use the left panel to upload a PDF, paste text, or enter a Web URL. Click "Process" to let the AI build the graph.
+
+Visualize: Navigate to the "Interactive Graph" tab on the right to see how the AI has connected your data points. You can drag the nodes around!
+
+Chat: Go to the "Chat with Data" tab and ask questions. The AI will traverse the graph to answer and provide exact citations.
+
+Manage Data: Use the "Format / Clear Entire Graph" button in the sidebar when you want to wipe the database and start fresh with a new document or topic.
+
+Author:
+
+Manish Sharma | B.Tech Computer Science and Engineering
+
+Passionate about AI, Machine Learning, and Full-Stack Engineering.
