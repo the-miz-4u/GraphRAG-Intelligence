@@ -37,7 +37,6 @@
 ---
 
 ## 📸 Chat & Knowledge Querying
-
 <img width="1918" height="1078" alt="image" src="https://github.com/user-attachments/assets/c42f1b40-f78e-41ca-bc41-2f46d4d07afe" />
 
 ---
