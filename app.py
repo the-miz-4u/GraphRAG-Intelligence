@@ -82,26 +82,39 @@ class KnowledgeGraphManager:
         return self.graph.query(query)
     
     def build_graph_from_text(self, text, llm):
-        # Yeh prompt LLM ko batayega ki entities aur relationships kaise nikalni hai
-        prompt = f"""
-        Extract key entities and their relationships from the following text.
-        Format: Entity1 | Relationship | Entity2
-        Keep it concise.
-        Text: {text}
-        """
-        response = llm.invoke(prompt)
+        # 🧩 NAYA UPGRADE: Text Chunking
+        import textwrap
         
-        # Response ko lines mein todna aur database mein save karna
-        lines = response.split('\n')
-        for line in lines:
-            if "|" in line:
-                parts = line.split("|")
-                if len(parts) == 3:
-                    e1 = parts[0].strip()
-                    rel = parts[1].strip()
-                    e2 = parts[2].strip()
-                    # Relationships save karna
-                    self.add_relationship(e1, rel, e2, "Uploaded Document")
+        # Bade text ko 2500 characters ke chhote chunks mein todna
+        chunks = textwrap.wrap(text, width=2500, break_long_words=False, replace_whitespace=False)
+        
+        # Ek-ek chunk ko LLM ke paas bhejna
+        for chunk in chunks:
+            prompt = f"""
+            Extract key entities and their relationships from the following text.
+            Format: Entity1 | Relationship | Entity2
+            Keep it concise.
+            Text: {chunk}
+            """
+            
+            try:
+                response = llm.invoke(prompt)
+                
+                # Response ko lines mein todna aur database mein save karna
+                lines = response.split('\n')
+                for line in lines:
+                    if "|" in line:
+                        parts = line.split("|")
+                        if len(parts) == 3:
+                            e1 = parts[0].strip()
+                            rel = parts[1].strip()
+                            e2 = parts[2].strip()
+                            self.add_relationship(e1, rel, e2, "Uploaded Document")
+                            
+            except Exception as e:
+                # Agar ek chhota hissa fail bhi ho jaye, toh app crash na ho
+                print(f"Skipping a chunk due to error: {e}")
+                continue
     def clear_database(self):
         # Ye query Neo4j ke saare nodes aur relationships ko ek baar mein uda degi
         query = "MATCH (n) DETACH DELETE n"
